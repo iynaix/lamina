@@ -63,9 +63,21 @@ in
         system = args.system or "x86_64-linux";
         tags = args.tags or [ ];
       };
-      filteredModules = builtins.filter (m: (m.enabled or true) && matchesHost m hostInfo) (
-        lib.concatMap loadModules (args.modules or [ ])
-      );
+      filteredModules = builtins.filter (
+        m:
+        let
+          enabledRaw = m.enabled or true;
+          enabled =
+            if builtins.isFunction enabledRaw then
+              enabledRaw {
+                inherit (hostInfo) tags system;
+                host = hostInfo.name;
+              }
+            else
+              enabledRaw;
+        in
+        (enabled && matchesHost m hostInfo)
+      ) (lib.concatMap loadModules (args.modules or [ ]));
     in
     lib.nixosSystem {
       inherit (hostInfo) system;

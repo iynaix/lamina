@@ -1,6 +1,6 @@
 # Lamina
 
-Lamina is a lightweight library for multi-host NixOS configurations for eliminating module boilerplate by automatically discovering, filtering, and assembling configurations and packages.
+Lamina is a lightweight library for multi-host NixOS configurations, eliminating module boilerplate by automatically discovering, filtering, and conditional loading for configurations and packages.
 
 ## Motivation
 
@@ -55,13 +55,16 @@ Create your NixOS configurations with `mkHost` and packages with `mkPackages`.
 
 Each file within a modules directory is an attrset with the following attrs:
 
-1. `enabled ? true` optionally defines if the module will be used
+1. `enabled ? true` optionally defines if the module will be used. It can also accept a function that takes the following arguments, returning a boolean:
+    - `host` the name of the host
+    - `tags` the tags of the host
+    - `system` the system passed to `nixosSystem`
 2. `tags ? null` optionally defines which tags this module will be used for
 3. `hosts ? null` optionally defines which hosts this module will be used on
 4. `packages ? null` optionally defines packages to be exposed in the flake's `packages`
 5. `config ? {}` defines the configuration for the module
 
-If both `tags` and `hosts` are provided, the conditions will be **OR**-ed.
+If both `tags` and `hosts` are provided, the conditions will be **OR**-ed. If **AND** behavior is disabled, it can be implemented via an `enabled` function.
 
 ```nix
 {
@@ -91,7 +94,7 @@ Each host is then created with the `mkHost` function with the following argument
 3. `specialArgs ? {}` optionally defines the specialArgs attr of nixosSystem, the following arguments will also be provided:
     - `host` the name of the host
     - `tags` the tags of the host
-    - `system` the system passed to `nixosSystem` (ain't nobody got time to type `pkgs.stdenv.hostPlatform.system`)
+    - `system` the system passed to `nixosSystem`
 4. `modules ? []` optionally defines a list of modules or directories the will be imported. 
    Directories or files beginning with '_' will be excluded, e.g. `_firefox/*` or `_firefox.nix`
 
