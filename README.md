@@ -1,0 +1,128 @@
+# Lamina
+
+Lamina is a lightweight library for multi-host NixOS configurations for eliminating module boilerplate by automatically discovering, filtering, and assembling configurations and packages.
+
+## Motivation
+
+I liked the standardized module format that [flake-parts](https://github.com/hercules-ci/flake-parts) offered, along with being able to freely move files around with libraries like [import-tree](https://github.com/denful/import-tree) or similar. I also liked being able to define [wrapped packages])https://github.com/BirdeeHub/nix-wrapper-modules) to be exposed in `flake.packages` and related config around that package within the same file.
+
+However, I did not like the amount of boilerplate of flake-parts or having to come up with arbitrary names for modules that ultimately only housed a single application for a single host, and then assembling lists of these modules for each host.
+
+So I decided to reinvent the wheel, and write the module system I wanted to use, heavily inspired by [nosh](https://codeberg.org/poacher/nosh).
+
+## Installation
+
+Add lamina to your flake inputs, 'inputs.nixpkgs.follows' is recommended as only nixpkgs.lib is used.
+
+```nix
+{
+    inputs = {
+        nixpkgs.url = "github:nixos/nixos-unstable";
+        lamina = {
+            url = "github:iynaix/lamina";
+            inputs.nixpkgs.follows = "nixpkgs";
+        };
+    };
+}
+```
+
+Create your NixOS configurations with `mkHost` and packages with `mkPackages`.
+
+```nix
+{
+    outputs = { nixpkgs, lamina, ... }: 
+    let 
+        pkgs = inputs.nixpkgs.legacyPackages.x86_64-linux;
+    in
+    {
+        nixosConfigurations = {
+            desktop = lamina.lib.mkHost "desktop" {
+                # ...
+            }; 
+            laptop = lamina.lib.mkHost "laptop" {
+                # ...
+            };
+        };
+
+        packages = mkPackages pkgs [ ./modules ] {
+            # ...
+        };
+    };
+}
+```
+
+## Modules
+
+Each file within a modules directory is an attrset with the following attrs:
+
+1. `enabled ? true` optionally defines if the module will be used
+2. `tags ? null` optionally defines which tags this module will be used for
+3. `hosts ? null` optionally defines which hosts this module will be used on
+4. `packages ? null` optionally defines packages to be exposed in the flake's `packages`
+5. `config ? {}` defines the configuration for the module
+
+If both `tags` and `hosts` are provided, the conditions will be **OR**-ed.
+
+```nix
+{
+    enabled = true;
+
+    tags = [ "gaming" ];
+    hosts = [ "laptop" ];
+
+    packages = { pkgs, ... }: {
+        # optional packages for flake.packages
+    };
+
+    config = { /* specialArgs */ }: {
+        # ...
+    };
+}
+```
+
+## mkHost
+
+Each host is then created with the `mkHost` function with the following arguments:
+
+`hostName` the name of the host, and an attrset with the following attrs:
+
+1. `system ? "x86_64-linux"` the system passed to `nixosSystem`
+2. `tags ? null` optionally defines a list of tags that this system will have
+3. `specialArgs ? {}` optionally defines the specialArgs attr of nixosSystem, the following arguments will also be provided:
+    - `host` the name of the host
+    - `tags` the tags of the host
+    - `system` the system passed to `nixosSystem` (ain't nobody got time to type `pkgs.stdenv.hostPlatform.system`)
+4. `modules ? []` optionally defines a list of modules or directories the will be imported. 
+   Directories or files beginning with '_' will be excluded, e.g. `_firefox/*` or `_firefox.nix`
+
+```nix
+{
+    nixosConfigurations = {
+        laptop = mkHost "laptop" {
+            system = "x86_64-linux"; # optional as x86_64-linux is the default
+            tags = [ "gaming" "impermanence" "laptop" ];
+            specialArgs = { inherit inputs self; };
+            modules = [ ./modules ];
+        }
+    };
+}
+```
+
+## mkPackages
+
+Packages can be created with the `mkPackages` function with the following arguments:
+
+1. `pkgs` the nixpkgs package set
+2. `modules ? []` optionally defines a list of modules or directories the will be imported.
+   Directories or files beginning with '_' will be excluded, e.g. `_firefox/*` or `_firefox.nix`
+3. `packagesArgs` the arguments that will be passed to the `packages` function of each module, the following arguments will also be provided:
+    - `pkgs` the nixpkgs package set
+    - `system` shorthand for `pkgs.stdenv.hostPlatform.system`
+
+```nix
+{
+    packages = mkPackages pkgs [ ./modules ] {
+        inherit inputs self;
+    };
+}
+```
