@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ lib, nixpkgs, ... }:
 let
   recursivelyImport =
     path:
@@ -78,8 +78,9 @@ in
         in
         (enabled && matchesHost m hostInfo)
       ) (lib.concatMap loadModules (args.modules or [ ]));
+      nixosSystem = args.nixosSystem or (import "${nixpkgs}/nixos/lib/eval-config.nix");
     in
-    lib.nixosSystem {
+    nixosSystem {
       inherit (hostInfo) system;
       specialArgs = (hostInfo.specialArgs or { }) // {
         inherit (hostInfo) system tags;

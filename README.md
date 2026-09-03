@@ -4,7 +4,7 @@ Lamina is a lightweight library for multi-host NixOS configurations, eliminating
 
 ## Motivation
 
-I liked the standardized module format that [flake-parts](https://github.com/hercules-ci/flake-parts) offered, along with being able to freely move files around with libraries like [import-tree](https://github.com/denful/import-tree) or similar. I also liked being able to define [wrapped packages])https://github.com/BirdeeHub/nix-wrapper-modules) to be exposed in `flake.packages` and related config around that package within the same file.
+I liked the standardized module format that [flake-parts](https://github.com/hercules-ci/flake-parts) offered, along with being able to freely move files around with libraries like [import-tree](https://github.com/denful/import-tree) or similar. I also liked being able to define [wrapped packages](https://github.com/BirdeeHub/nix-wrapper-modules) to be exposed in `flake.packages` and related config around that package within the same file.
 
 However, I did not like the amount of boilerplate of flake-parts or having to come up with arbitrary names for modules that ultimately only housed a single application for a single host, and then assembling lists of these modules for each host.
 
@@ -30,15 +30,15 @@ Create your NixOS configurations with `mkHost` and packages with `mkPackages`.
 
 ```nix
 {
-    outputs = { nixpkgs, lamina, ... }: 
-    let 
+    outputs = { nixpkgs, lamina, ... }:
+    let
         pkgs = inputs.nixpkgs.legacyPackages.x86_64-linux;
     in
     {
         nixosConfigurations = {
             desktop = lamina.lib.mkHost "desktop" {
                 # ...
-            }; 
+            };
             laptop = lamina.lib.mkHost "laptop" {
                 # ...
             };
@@ -95,8 +95,9 @@ Each host is then created with the `mkHost` function with the following argument
     - `host` the name of the host
     - `tags` the tags of the host
     - `system` the system passed to `nixosSystem`
-4. `modules ? []` optionally defines a list of modules or directories the will be imported. 
+4. `modules ? []` optionally defines a list of modules or directories the will be imported.
    Directories or files beginning with '_' will be excluded, e.g. `_firefox/*` or `_firefox.nix`
+5. `nixosSystem ? <nixpkgs/eval-config>` optionally defines the nixosSystem function to be called.
 
 ```nix
 {
@@ -129,3 +130,7 @@ Packages can be created with the `mkPackages` function with the following argume
     };
 }
 ```
+
+## Credits
+
+- [nosh](https://codeberg.org/poacher/nosh) for being the primary inspiration for this project
