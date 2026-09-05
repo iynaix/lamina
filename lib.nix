@@ -15,14 +15,25 @@ let
     in
     lib.filter (file: !isUnderscored file) files;
 
+  isLaminaModule =
+    m:
+    builtins.isAttrs m
+    && lib.any (k: m ? ${k}) [
+      "enabled"
+      "tags"
+      "host"
+      "packages"
+      "config"
+    ];
+
   loadModules =
     dir:
     map (
       path:
       let
-        m = import path;
+        module = import path;
       in
-      if builtins.isAttrs m then m else { config = m; }
+      if isLaminaModule module then module else { config = module; }
     ) (recursivelyImport dir);
 
   matchesHost =
