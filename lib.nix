@@ -32,8 +32,12 @@ let
       path:
       let
         module = import path;
+        located = lib.setDefaultModuleLocation path;
       in
-      if isLaminaModule module then module else { config = module; }
+      if isLaminaModule module then
+        module // lib.optionalAttrs (module ? config) { config = located module.config; }
+      else
+        { config = located module; }
     ) (recursivelyImport dir);
 
   matchesHost =
